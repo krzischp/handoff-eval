@@ -1,138 +1,14 @@
-import numpy as np
-import pandas as pd
 import os
 import json
+import numpy as np
+import pandas as pd
+
+from similarity import compute_similarity
+import heapq
 
 
-# Function to evaluate a single model variant
-def evaluate_model(model_predictions, ground_truth_data):
-    """
-    Evaluates a single model variant against ground truth.
-    """
-    line_item_precision, line_item_recall, line_item_f1 = [], [], []
-    qty_mape, rate_mape, cost_mape = [], [], []
-    qty_rmse, rate_rmse, cost_rmse = [], [], []
-    total_cost_mape, total_cost_rmse = [], []
-
-    # Iterate over test cases in the model predictions
-    for prediction in model_predictions["estimate_preds"]:
-        file_name = prediction["valid_file_name"]
-        if file_name not in ground_truth_data:
-            continue
-
-        # Ground truth
-        gt_rows = ground_truth_data[file_name]["rows"]
-        gt_total_cost = ground_truth_data[file_name]["totalCostUsd"]
-
-        # Model outputs (average over 2 estimations)
-        preds_list = prediction["rows"]
-
-        # Convert to DataFrames for easier comparison
-        gt_df = pd.DataFrame(gt_rows)
-        pred_df = pd.DataFrame(preds_list)
-
-        # Line-item matching
-        gt_labels = set(gt_df["label"])
-        pred_labels = set(pred_df["label"])
-        true_positives = len(gt_labels & pred_labels)
-        precision = true_positives / len(pred_labels) if len(pred_labels) > 0 else 0
-        recall = true_positives / len(gt_labels) if len(gt_labels) > 0 else 0
-        f1 = (
-            2 * (precision * recall) / (precision + recall)
-            if precision + recall > 0
-            else 0
-        )
-
-        line_item_precision.append(precision)
-        line_item_recall.append(recall)
-        line_item_f1.append(f1)
-
-        # Quantity, Rate, and Cost Errors
-        merged_df = gt_df.merge(
-            pred_df, on="label", suffixes=("_gt", "_pred"), how="inner"
-        )
-
-        if not merged_df.empty:
-            qty_mape.append(
-                np.mean(
-                    np.abs(
-                        (merged_df["qty_gt"] - merged_df["qty_pred"])
-                        / merged_df["qty_gt"]
-                    )
-                )
-            )
-            rate_mape.append(
-                np.mean(
-                    np.abs(
-                        (merged_df["rateUsd_gt"] - merged_df["rateUsd_pred"])
-                        / merged_df["rateUsd_gt"]
-                    )
-                )
-            )
-            cost_mape.append(
-                np.mean(
-                    np.abs(
-                        (
-                            merged_df["rowTotalCostUsd_gt"]
-                            - merged_df["rowTotalCostUsd_pred"]
-                        )
-                        / merged_df["rowTotalCostUsd_gt"]
-                    )
-                )
-            )
-
-            qty_rmse.append(
-                np.sqrt(np.mean((merged_df["qty_gt"] - merged_df["qty_pred"]) ** 2))
-            )
-            rate_rmse.append(
-                np.sqrt(
-                    np.mean((merged_df["rateUsd_gt"] - merged_df["rateUsd_pred"]) ** 2)
-                )
-            )
-            cost_rmse.append(
-                np.sqrt(
-                    np.mean(
-                        (
-                            merged_df["rowTotalCostUsd_gt"]
-                            - merged_df["rowTotalCostUsd_pred"]
-                        )
-                        ** 2
-                    )
-                )
-            )
-
-        # Total Cost Accuracy
-        pred_total_cost = pred_df["rowTotalCostUsd"].sum()
-        total_cost_mape.append(abs(gt_total_cost - pred_total_cost) / gt_total_cost)
-        total_cost_rmse.append((gt_total_cost - pred_total_cost) ** 2)
-
-    # Aggregate results
-    results = {
-        "Precision": np.mean(line_item_precision),
-        "Recall": np.mean(line_item_recall),
-        "F1 Score": np.mean(line_item_f1),
-        "Qty MAPE": np.mean(qty_mape),
-        "Rate MAPE": np.mean(rate_mape),
-        "Cost MAPE": np.mean(cost_mape),
-        "Qty RMSE": np.mean(qty_rmse),
-        "Rate RMSE": np.mean(rate_rmse),
-        "Cost RMSE": np.mean(cost_rmse),
-        "Total Cost MAPE": np.mean(total_cost_mape),
-        "Total Cost RMSE": np.sqrt(np.mean(total_cost_rmse)),
-    }
-    return results
-
-
+# Function to load JSON files from a directory
 def load_json_files(directory):
-    """
-    Loads all JSON files from a given directory into a dictionary.
-
-    Args:
-        directory (str): Path to the directory containing JSON files.
-
-    Returns:
-        dict: A dictionary with file names as keys and JSON content as values.
-    """
     data = {}
     for file in os.listdir(directory):
         if file.endswith(".json"):
@@ -142,21 +18,138 @@ def load_json_files(directory):
     return data
 
 
+# Always picks the highest available similarity at each step
+def match_line_items(gt_rows, pred_rows):
+    if not gt_rows or not pred_rows:
+        return {}
+
+    cost_matrix = np.zeros((len(gt_rows), len(pred_rows)))
+
+    # Compute similarity matrix
+    for i, gt_row in enumerate(gt_rows):
+        for j, pred_row in enumerate(pred_rows):
+            cost_matrix[i, j] = compute_similarity(gt_row, pred_row)
+
+    # Sort pairs by highest similarity score first
+    sorted_pairs = sorted(
+        [
+            (i, j, cost_matrix[i, j])
+            for i in range(len(gt_rows))
+            for j in range(len(pred_rows))
+        ],
+        key=lambda x: -x[2],  # Sort by descending similarity
+    )
+
+    matched_pairs = {}
+    used_gt = set()
+    used_pred = set()
+
+    # Greedily match the highest similarity pairs first
+    for gt_idx, pred_idx, _ in sorted_pairs:
+        if gt_idx not in used_gt and pred_idx not in used_pred:
+            matched_pairs[gt_idx] = pred_idx
+            used_gt.add(gt_idx)
+            used_pred.add(pred_idx)
+
+    return matched_pairs
+
+
+# SUPPOSELY FASTER IMPLEMENTATION:
+# - Avoid constructing the full sorted list → Instead of sorting all pairs, we process the highest available similarity in one pass.
+# - Use a priority queue (heap) → This allows us to efficiently retrieve the highest similarity pair at each step in O(log n) instead of sorting all at once (O(n log n) sorting vs O(n log m) heap insertions).
+# def match_line_items(gt_rows, pred_rows):
+#     if not gt_rows or not pred_rows:
+#         return {}
+
+#     num_gt, num_pred = len(gt_rows), len(pred_rows)
+#     cost_matrix = np.zeros((num_gt, num_pred))
+
+#     # Compute similarity matrix
+#     for i, gt_row in enumerate(gt_rows):
+#         for j, pred_row in enumerate(pred_rows):
+#             cost_matrix[i, j] = compute_similarity(gt_row, pred_row)
+
+#     # Use a max-heap to store the pairs with highest similarity first
+#     max_heap = []
+#     for i in range(num_gt):
+#         for j in range(num_pred):
+#             heapq.heappush(
+#                 max_heap, (-cost_matrix[i, j], i, j)
+#             )  # Negate similarity for max-heap
+
+#     matched_pairs = {}
+#     used_gt = set()
+#     used_pred = set()
+
+#     # Process heap (greedy selection of highest similarity)
+#     while max_heap:
+#         _, gt_idx, pred_idx = heapq.heappop(max_heap)  # Get highest similarity pair
+#         if gt_idx not in used_gt and pred_idx not in used_pred:
+#             matched_pairs[gt_idx] = pred_idx
+#             used_gt.add(gt_idx)
+#             used_pred.add(pred_idx)
+
+#     return matched_pairs
+
+
+# Step 2: Compare Numerical Metrics (MAPE Calculation)
+def calculate_mape(gt_rows, pred_rows, matched_pairs):
+    qty_mape, rate_mape, cost_mape = [], [], []
+
+    for gt_idx, pred_idx in matched_pairs.items():
+        gt_row = gt_rows[gt_idx]
+        pred_row = pred_rows[pred_idx]
+
+        if gt_row["qty"] > 0:
+            qty_mape.append(abs(gt_row["qty"] - pred_row["qty"]) / gt_row["qty"])
+        if gt_row["rateUsd"] > 0:
+            rate_mape.append(
+                abs(gt_row["rateUsd"] - pred_row["rateUsd"]) / gt_row["rateUsd"]
+            )
+        if gt_row["rowTotalCostUsd"] > 0:
+            cost_mape.append(
+                abs(gt_row["rowTotalCostUsd"] - pred_row["rowTotalCostUsd"])
+                / gt_row["rowTotalCostUsd"]
+            )
+
+    results = {
+        "Qty MAPE": np.mean(qty_mape) if qty_mape else None,
+        "Rate MAPE": np.mean(rate_mape) if rate_mape else None,
+        "Cost MAPE": np.mean(cost_mape) if cost_mape else None,
+    }
+    return results
+
+
+# Evaluate a Single Model
+def evaluate_model(model_data, ground_truth_data):
+    qty_mape, rate_mape, cost_mape = [], [], []
+
+    for prediction in model_data["estimate_preds"]:
+        file_name = prediction["valid_file_name"]
+        if file_name not in ground_truth_data:
+            continue
+
+        gt_rows = ground_truth_data[file_name]["rows"]
+        pred_rows = prediction["rows"]
+
+        matched_pairs = match_line_items(gt_rows, pred_rows)
+        mape_results = calculate_mape(gt_rows, pred_rows, matched_pairs)
+
+        qty_mape.append(mape_results["Qty MAPE"])
+        rate_mape.append(mape_results["Rate MAPE"])
+        cost_mape.append(mape_results["Cost MAPE"])
+
+    return {
+        "Qty MAPE": np.mean([x for x in qty_mape if x is not None]),
+        "Rate MAPE": np.mean([x for x in rate_mape if x is not None]),
+        "Cost MAPE": np.mean([x for x in cost_mape if x is not None]),
+    }
+
+
+# Evaluate All Models Using the Modular Approach
 def evaluate_all_models(model_output_data, ground_truth_data):
-    """
-    Evaluates all model variants against the ground truth.
-
-    Args:
-        model_output_data (dict): Dictionary containing model output JSONs.
-        ground_truth_data (dict): Dictionary containing ground truth JSONs.
-
-    Returns:
-        pd.DataFrame: A dataframe with evaluation results for each model.
-    """
     model_results = {
         model_name: evaluate_model(model_data, ground_truth_data)
         for model_name, model_data in model_output_data.items()
     }
-    return pd.DataFrame.from_dict(model_results, orient="index").sort_index(
-        key=lambda x: x.astype(int)
-    )
+    return pd.DataFrame.from_dict(model_results, orient="index")
