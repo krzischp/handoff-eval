@@ -57,6 +57,7 @@ def match_line_item_pairs_for_model(model_data, ground_truth_data):
             gt_rows, pred_rows, matched_pairs
         )
         all_matched_pairs[file_name]["matched_pairs_data"] = matched_pairs_data
+        all_matched_pairs[file_name]["n_estimations"] = len(pred_rows)
 
     return all_matched_pairs
 
@@ -102,16 +103,25 @@ async def process_matched_pairs_async(matched_pairs):
     Enhances matched_pairs with LLM-based similarity evaluation and computes recall asynchronously.
 
     ✅ Applies LLM-based label matching to add 'similar_task' and 'justification' columns.
-    ✅ Computes recall: sum(df["similar_task"] == 1) / df.shape[0] for each example.
+    ✅ Computes recall, precision, f1
     ✅ Updates each example's 'matched_pairs_data' and stores recall.
     """
     matched_pairs = await add_llm_label_match_async(matched_pairs)
 
-    # Compute recall
+    # Compute classification metrics
     for file_name in matched_pairs:
         df = matched_pairs[file_name]["matched_pairs_data"]
-        matched_pairs[file_name]["recall"] = (
-            sum(df["similar_task"] == 1) / df.shape[0] if df.shape[0] > 0 else 0
+        n_similar = sum(df["similar_task"] == 1)
+        n_estimations = matched_pairs[file_name]["n_estimations"]
+        n_gt = df.shape[0]
+        recall = n_similar / n_gt if n_gt > 0 else 0
+        precision = n_similar / n_estimations if n_estimations > 0 else 0
+        matched_pairs[file_name]["recall"] = recall
+        matched_pairs[file_name]["precision"] = precision
+        matched_pairs[file_name]["f1"] = (
+            2 * (precision * recall) / (precision + recall)
+            if (precision + recall) > 0
+            else 0
         )
 
     return matched_pairs
