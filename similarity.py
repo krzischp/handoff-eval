@@ -3,6 +3,7 @@ from fuzzywuzzy import fuzz
 import pandas as pd
 from openai import AsyncOpenAI
 import os
+import numpy as np
 
 # Matches only very close words (e.g., "install" ≈ "instal")
 # only minor typos should be corrected
@@ -118,7 +119,43 @@ def compute_similarity(gt_row, pred_row, fuzzy_threshold=fuzzy_match_threshold):
     return total_score
 
 
-async def llm_label_match_async(gt_label, pred_label):
+# Always picks the highest available similarity at each step
+def match_line_items(gt_rows, pred_rows):
+    if not gt_rows or not pred_rows:
+        return {}
+
+    cost_matrix = np.zeros((len(gt_rows), len(pred_rows)))
+
+    # Compute similarity matrix
+    for i, gt_row in enumerate(gt_rows):
+        for j, pred_row in enumerate(pred_rows):
+            cost_matrix[i, j] = compute_similarity(gt_row, pred_row)
+
+    # Sort pairs by highest similarity score first
+    sorted_pairs = sorted(
+        [
+            (i, j, cost_matrix[i, j])
+            for i in range(len(gt_rows))
+            for j in range(len(pred_rows))
+        ],
+        key=lambda x: -x[2],  # Sort by descending similarity
+    )
+
+    matched_pairs = {}
+    used_gt = set()
+    used_pred = set()
+
+    # Greedily match the highest similarity pairs first
+    for gt_idx, pred_idx, _ in sorted_pairs:
+        if gt_idx not in used_gt and pred_idx not in used_pred:
+            matched_pairs[gt_idx] = pred_idx
+            used_gt.add(gt_idx)
+            used_pred.add(pred_idx)
+
+    return matched_pairs
+
+
+async def llm_label_match_async(gt_label, pred_label, model="gpt-4-turbo"):
     system_prompt = (
         "You are a highly experienced construction estimator specializing in residential projects. "
         "Your task is to determine whether two given labels describe a related construction task, "
@@ -135,7 +172,7 @@ async def llm_label_match_async(gt_label, pred_label):
     )
 
     response = await client.chat.completions.create(
-        model="gpt-4-turbo",
+        model=model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},

@@ -2,8 +2,9 @@ import pandas as pd
 from evaluation import match_line_items
 from similarity import llm_label_match_async
 import asyncio
+import os
+import json
 
-# from similarity import llm_label_match
 
 line_item_info = [
     "label",
@@ -14,6 +15,17 @@ line_item_info = [
     "rateUsd",
     "rowTotalCostUsd",
 ]
+
+
+# Function to load JSON files from a directory
+def load_json_files(directory):
+    data = {}
+    for file in os.listdir(directory):
+        if file.endswith(".json"):
+            file_path = os.path.join(directory, file)
+            with open(file_path, "r") as f:
+                data[file.replace(".json", "")] = json.load(f)
+    return data
 
 
 # Function to get GT vs Estimate dataframe
