@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 from similarity import compute_similarity
-import heapq
 
 
 # Function to load JSON files from a directory
@@ -52,44 +51,6 @@ def match_line_items(gt_rows, pred_rows):
             used_pred.add(pred_idx)
 
     return matched_pairs
-
-
-# SUPPOSELY FASTER IMPLEMENTATION:
-# - Avoid constructing the full sorted list → Instead of sorting all pairs, we process the highest available similarity in one pass.
-# - Use a priority queue (heap) → This allows us to efficiently retrieve the highest similarity pair at each step in O(log n) instead of sorting all at once (O(n log n) sorting vs O(n log m) heap insertions).
-# def match_line_items(gt_rows, pred_rows):
-#     if not gt_rows or not pred_rows:
-#         return {}
-
-#     num_gt, num_pred = len(gt_rows), len(pred_rows)
-#     cost_matrix = np.zeros((num_gt, num_pred))
-
-#     # Compute similarity matrix
-#     for i, gt_row in enumerate(gt_rows):
-#         for j, pred_row in enumerate(pred_rows):
-#             cost_matrix[i, j] = compute_similarity(gt_row, pred_row)
-
-#     # Use a max-heap to store the pairs with highest similarity first
-#     max_heap = []
-#     for i in range(num_gt):
-#         for j in range(num_pred):
-#             heapq.heappush(
-#                 max_heap, (-cost_matrix[i, j], i, j)
-#             )  # Negate similarity for max-heap
-
-#     matched_pairs = {}
-#     used_gt = set()
-#     used_pred = set()
-
-#     # Process heap (greedy selection of highest similarity)
-#     while max_heap:
-#         _, gt_idx, pred_idx = heapq.heappop(max_heap)  # Get highest similarity pair
-#         if gt_idx not in used_gt and pred_idx not in used_pred:
-#             matched_pairs[gt_idx] = pred_idx
-#             used_gt.add(gt_idx)
-#             used_pred.add(pred_idx)
-
-#     return matched_pairs
 
 
 # Step 2: Compare Numerical Metrics (MAPE Calculation)

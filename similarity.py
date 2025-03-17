@@ -1,8 +1,6 @@
 import re
 from fuzzywuzzy import fuzz
-import openai
 import pandas as pd
-import json
 from openai import AsyncOpenAI
 import os
 
@@ -79,9 +77,6 @@ def min_max_normalize(value, min_val, max_val):
         return 0  # Avoid division by zero edge case
 
     return (value - min_val) / (max_val - min_val)
-
-
-import numpy as np
 
 
 def compute_similarity(gt_row, pred_row, fuzzy_threshold=fuzzy_match_threshold):
