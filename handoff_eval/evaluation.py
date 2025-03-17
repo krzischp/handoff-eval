@@ -5,66 +5,73 @@ import numpy as np
 # ----- Investigation plots -----
 
 
-def compute_model_metrics_df(matched_pairs_dict, metric=None, error_type="mae"):
-    from sklearn.metrics import r2_score
+import numpy as np
+import pandas as pd
+from sklearn.metrics import r2_score
 
+
+def compute_model_metrics_df(matched_pairs_dict, metric=None, error_type="mae"):
     """
-    Computes recall or error metrics (MAE, MAPE, R², Balanced Recall-R²) for different models and examples.
+    Computes precision or error metrics (MAE, MAPE, R², Balanced Recall-R²) for different models and examples.
 
     Returns:
-    - A DataFrame containing columns: ["example", "model", "value"].
+    - A DataFrame containing columns: ["example", "model", "metric", "error_type", "value"].
     """
     valid_metrics = ["qty", "rateUsd", "rowTotalCostUsd"]
-    valid_error_types = ["mae", "mape", "r2", "balanced"]
+    valid_error_types = ["mae", "mape", "r2", "recall", "precision"]
 
     if metric not in valid_metrics:
-        metric = "recall"  # Default to recall if metric is None or invalid
+        metric = None  # Default to None, meaning we're dealing with recall/precision
 
     if error_type not in valid_error_types:
-        error_type = "mae"  # Default to MAE if error_type is invalid
+        error_type = "mae"  # Default to MAE if invalid
 
     data = []
     for model_name, examples in matched_pairs_dict.items():
         for example_name, example_data in examples.items():
             df = example_data["matched_pairs_data"]
-            recall = example_data["recall"]
 
-            if metric == "recall":
-                value = recall
+            # Handle recall and precision separately
+            if error_type in ["recall", "precision"]:
+                value = example_data.get(error_type, None)  # Fetch recall or precision
             else:
                 # Compute the chosen error metric
-                gt_col = f"gt_{metric}"
-                pred_col = f"pred_{metric}"
+                if metric is not None:
+                    gt_col = f"gt_{metric}"
+                    pred_col = f"pred_{metric}"
 
-                if gt_col in df.columns and pred_col in df.columns:
-                    gt_values = df[gt_col].values
-                    pred_values = df[pred_col].values
+                    if gt_col in df.columns and pred_col in df.columns:
+                        gt_values = df[gt_col].values
+                        pred_values = df[pred_col].values
 
-                    if error_type == "mae":
-                        value = np.mean(np.abs(gt_values - pred_values))
-                    elif error_type == "mape":
-                        gt_values = np.where(
-                            gt_values == 0, 1e-6, gt_values
-                        )  # Avoid division by zero
-                        value = (
-                            np.mean(np.abs((gt_values - pred_values) / gt_values)) * 100
-                        )  # In percentage
-                    elif error_type == "r2":
-                        value = r2_score(gt_values, pred_values)
-                    elif error_type == "balanced":
-                        r2_value = r2_score(gt_values, pred_values)
-                        r2_normalized = (
-                            r2_value + 1
-                        ) / 2  # Normalize R² to (0,1) range
-                        value = (
-                            np.sqrt(recall * r2_normalized)
-                            if recall is not None and r2_value is not None
-                            else None
-                        )
+                        if error_type == "mae":
+                            value = np.mean(np.abs(gt_values - pred_values))
+                        elif error_type == "mape":
+                            gt_values = np.where(
+                                gt_values == 0, 1e-6, gt_values
+                            )  # Avoid division by zero
+                            value = (
+                                np.mean(np.abs((gt_values - pred_values) / gt_values))
+                                * 100
+                            )  # In percentage
+                        elif error_type == "r2":
+                            value = r2_score(gt_values, pred_values)
+                    else:
+                        value = None  # Handle missing columns
                 else:
-                    value = None  # Handle missing columns
+                    value = None  # No valid metric provided
 
-            data.append({"example": example_name, "model": model_name, "value": value})
+            data.append(
+                {
+                    "example": example_name,
+                    "model": model_name,
+                    "metric": (
+                        metric if metric else error_type
+                    ),  # If metric is None, store recall/precision
+                    "error_type": error_type,
+                    "value": value,
+                }
+            )
 
     return pd.DataFrame(data)
 
@@ -90,7 +97,7 @@ def aggregate_by_model(df):
     return plot_data, model_order
 
 
-def plot_model_metrics(df, x="example"):
+def plot_model_metrics(df, x="example", metric_name="Metric Value"):
     import matplotlib.pyplot as plt
 
     """
@@ -130,8 +137,8 @@ def plot_model_metrics(df, x="example"):
 
     # Formatting
     plt.xlabel(x_label)
-    plt.ylabel("Metric Value")
-    plt.title(f"Model Metrics by {x_label}")
+    plt.ylabel(metric_name)
+    plt.title(f"{metric_name} by {x_label}")
     plt.xticks(rotation=45)
 
     if x == "example":

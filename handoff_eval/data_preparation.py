@@ -1,9 +1,10 @@
 import pandas as pd
-from evaluation import match_line_items
-from similarity import llm_label_match_async
 import asyncio
 import os
 import json
+
+from .similarity import llm_label_match_async, match_line_items
+from .logger import logger
 
 
 line_item_info = [
@@ -137,13 +138,13 @@ async def process_all_models_async(model_output_data, ground_truth_data):
     """
     matched_pairs_dict = {}
 
-    # Step 1: Generate matched_pairs for all models
+    logger.info("Step 1: Generating matched_pairs for all models.")
     for model_name, model_data in model_output_data.items():
         matched_pairs_dict[model_name] = match_line_item_pairs_for_model(
             model_data, ground_truth_data
         )
 
-    # Step 2: Process all matched_pairs asynchronously
+    logger.info("Step 2: Processing all matched_pairs asynchronously.")
     tasks = {
         model_name: process_matched_pairs_async(matched_pairs)
         for model_name, matched_pairs in matched_pairs_dict.items()
@@ -151,8 +152,9 @@ async def process_all_models_async(model_output_data, ground_truth_data):
 
     processed_results = await asyncio.gather(*tasks.values())
 
-    # Step 3: Update the dictionary with processed results
+    logger.info("Step 3: Updating matched_pairs_dict with processed results.")
     for model_name, processed_data in zip(tasks.keys(), processed_results):
         matched_pairs_dict[model_name] = processed_data
 
+    logger.info("Processing complete.")
     return matched_pairs_dict
