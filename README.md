@@ -1,8 +1,80 @@
 # handoff-eval
 **Handoff** evaluation framework
 
+## **Table of Contents**
+- [Installation Guide](#installation-guide)
+  - [Using `handoff-eval` as a Library](#using-handoff-eval-as-a-library)
+  - [Developing & Testing `handoff-eval`](#developing--testing-handoff-eval)
+- [Evaluation Framework](#evaluation-framework)
+- [Run the Validation Framework](#run-the-validation-framework)
+  - [Generate the Validation Data](#generate-the-validation-data)
+  - [Identify the Best Models](#identify-the-best-models)
+  - [Investigate More Deeply](#investigate-more-deeply)
 
-## **Evaluation Framework for Estimate Line Items vs Ground Truth (GT) Line Items**
+---
+
+## Installation Guide
+
+### Using `handoff-eval` as a Library
+
+If you only need to **use** `handoff-eval` in a project, follow these steps:
+
+Run the following command to create and activate a virtual environment:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate  # On macOS/Linux
+```
+(For Windows users, use `.\.venv\Scripts\activate` instead of `source .venv/bin/activate`.)
+
+Now, install the library from GitHub:
+```bash
+pip install git+https://github.com/krzischp/handoff-eval.git
+```
+
+Install jupyter (for running notebooks) and `python-dotenv` (for environment variables):
+```bash
+pip install jupyter==1.1.1 python-dotenv==1.0.1
+```
+
+Your environment is now ready to use handoff-eval!
+
+### Developing & Testing handoff-eval
+If you want to modify and test the library, follow these steps:
+```bash
+git clone https://github.com/krzischp/handoff-eval.git
+cd handoff-eval
+```
+
+Set up a virtual environment and use `make init` to install all required dependencies, including `handoff-eval` in editable mode:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate  # On macOS/Linux
+make init
+```
+
+Run the test suite to ensure everything works:
+```bash
+make test
+```
+Before committing changes, run:
+```bash
+make format  # Auto-format with Black
+make lint    # Check code style with Flake8
+```
+
+To run notebooks inside the virtual environment:
+```bash
+make notebook
+```
+
+If new dependencies are added to requirements.txt or requirements-dev.txt, run:
+```bash
+make sync
+```
+
+## Evaluation Framework
+
+**For Estimate Line Items vs Ground Truth (GT) Line Items**
 
 | **Step**        | **Objective** | **Key Variables** | **Methodology** | **Why This Approach?** |
 |----------------|--------------|-------------------|----------------|----------------------|
@@ -33,6 +105,8 @@
 Executing step 1 and step 2 of the methodology to generate our evaluation data.
 
 ```python
+import handoff_eval
+
 async def run_async_processing():
     return await handoff_eval.process_all_models_async(model_output_data, ground_truth_data)
 
@@ -59,8 +133,6 @@ handoff_eval.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitali
 ![Recall by model](images/recall_by_model.png)
 
 ```python
-metric = "rowTotalCostUsd"
-error_type = "mape"
 metric = "rowTotalCostUsd"
 error_type = "mape"
 df_metrics = handoff_eval.compute_model_metrics_df(matched_pairs_dict, metric=metric, error_type=error_type)
