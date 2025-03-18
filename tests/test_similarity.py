@@ -1,6 +1,7 @@
 import os
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 # Ensure OpenAI API Key is set in test environment to avoid import errors
 os.environ["OPENAI_API_KEY"] = "test_key"

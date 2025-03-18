@@ -1,13 +1,9 @@
+import numpy as np
 import pandas as pd
 import seaborn as sns
-import numpy as np
+from sklearn.metrics import r2_score
 
 # ----- Investigation plots -----
-
-
-import numpy as np
-import pandas as pd
-from sklearn.metrics import r2_score
 
 
 def compute_model_metrics_df(matched_pairs_dict, metric=None, error_type="mae"):

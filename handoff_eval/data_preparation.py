@@ -1,11 +1,11 @@
-import pandas as pd
 import asyncio
-import os
 import json
+import os
 
-from .similarity import llm_label_match_async, match_line_items
+import pandas as pd
+
 from .logger import logger
-
+from .similarity import llm_label_match_async, match_line_items
 
 line_item_info = [
     "label",

@@ -43,9 +43,13 @@ test: ## Run tests
 
 lint: ## Lint the code
 	@echo "Linting code with flake8..."
-	$(PYTHON) -m flake8 handoff_eval tests
+	$(PYTHON) -m flake8 --ignore=E501,W503 handoff_eval tests
 
-format: ## Format the code with black
+format: ## Auto-fix all code issues (unused imports, formatting, and sorting)
+	@echo "Removing unused imports and variables with autoflake..."
+	$(PYTHON) -m autoflake --remove-all-unused-imports --recursive --remove-unused-variables --in-place handoff_eval tests
+	@echo "Sorting imports with isort..."
+	$(PYTHON) -m isort handoff_eval tests
 	@echo "Formatting code with black..."
 	$(PYTHON) -m black handoff_eval tests
 

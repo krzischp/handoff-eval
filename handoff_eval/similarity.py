@@ -1,9 +1,10 @@
-import re
-from fuzzywuzzy import fuzz
-import pandas as pd
-from openai import AsyncOpenAI
 import os
+import re
+
 import numpy as np
+import pandas as pd
+from fuzzywuzzy import fuzz
+from openai import AsyncOpenAI
 
 # Matches only very close words (e.g., "install" ≈ "instal")
 # only minor typos should be corrected
