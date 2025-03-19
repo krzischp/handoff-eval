@@ -10,7 +10,7 @@ client = openai.AsyncOpenAI(
 
 # Default OpenAI model for completions
 # DEFAULT_MODEL = "gpt-4-turbo"
-DEFAULT_MODEL = "gpt-3.5-turbo"
+DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
 # help stabilize API requests and avoid OpenAI’s retries
 semaphore = asyncio.Semaphore(500)  # Limit to 500 concurrent API calls

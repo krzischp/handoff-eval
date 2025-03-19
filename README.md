@@ -5,6 +5,7 @@
 - [Installation Guide](#installation-guide)
   - [Using `handoff-eval` as a Library](#using-handoff-eval-as-a-library)
   - [Developing & Testing `handoff-eval`](#developing--testing-handoff-eval)
+- [Setting Up Data Folder](#setting-up-data-folder)
 - [Evaluation Framework](#evaluation-framework)
 - [Run the Validation Framework](#run-the-validation-framework)
   - [Generate the Validation Data](#generate-the-validation-data)
@@ -31,11 +32,29 @@ Now, install the library from GitHub:
 pip install git+https://github.com/krzischp/handoff-eval.git
 ```
 
+Create a `.env` file in your project's root directory to store environment variables:
+```bash
+touch .env
+```
+
+Then, open .env in a text editor and add the following:
+```ini
+OPENAI_API_KEY=your-api-key-here
+OPENAI_MODEL=gpt-4-turbo  # Change this to the model you prefer
+```
+
 Your environment is now ready to use handoff-eval!
 
 Install jupyter (for running notebooks) and `python-dotenv` (for environment variables):
 ```bash
 pip install jupyter==1.1.1 python-dotenv==1.0.1
+```
+
+Read the env variables before to use `handoff_eval`
+```python
+from dotenv import load_dotenv, find_dotenv
+
+_ = load_dotenv(find_dotenv())  # read local .env file
 ```
 
 ### Developing & Testing handoff-eval
@@ -71,6 +90,81 @@ If new dependencies are added to requirements.txt or requirements-dev.txt, run:
 ```bash
 make sync
 ```
+
+## Setting Up Data Folder
+Before running `handoff-eval`, create a `data/` directory and organize your input files in the following format:
+
+```
+├── data
+│   ├── ai_ml_take_home  # Example subfolder for a dataset
+│   │   ├── ground_truth
+│   │   │   ├── example_01.json
+│   │   │   ├── example_02.json
+│   │   │   ├── example_03.json
+│   │   │   ├── ...
+│   │   └── model_outputs
+│   │       ├── 2.json
+│   │       ├── 4.json
+│   │       ├── 5.json
+│   │       └── 7.json
+```
+
+- The name `ai_ml_take_home` is an example, but each dataset should have its own subfolder.
+- The **ground_truth** folder contains labeled examples.
+- The **model_outputs** folder stores the AI-generated results.
+
+#### **Ground Truth Data**
+The `ground_truth/` folder contains JSON files (`example_n.json`) with the following structure:
+
+```json
+{
+  "test_n": 1,
+  "input": "Detailed description of the project and requirements",
+  "rows": [
+    {
+      "item": "Task description",
+      "quantity": 10,
+      "unit_price_usd": 15.5,
+      "subtotal_usd": 155.0
+    }
+  ],
+  "totalCostUsd": 155.0
+}
+```
+- `test_n`: Integer representing the test case number.
+- `input`: String describing the **project details and requirements**.
+- `rows`: Array of objects, each representing a line item in the estimate.
+- `totalCostUsd`: Number representing the total project cost in USD.
+
+---
+
+#### **Model Output Data**
+The `model_outputs/` folder contains JSON files (`n.json`), each storing model-generated estimates:
+
+```json
+{
+  "estimate_preds": [
+    {
+      "valid_file_name": "example_01.json",
+      "rows": [
+        {
+          "item": "Generated task",
+          "quantity": 10,
+          "unit_price_usd": 15.5,
+          "subtotal_usd": 155.0
+        }
+      ],
+      "time_to_estimate_sec": 3.45
+    }
+  ]
+}
+```
+- `estimate_preds`: Array of model outputs.
+  - `valid_file_name`: The corresponding ground truth file (`example_n.json`) used as input.
+  - `rows`: Generated line-item estimates (same format as in the ground truth data).
+  - `time_to_estimate_sec`: Time taken to generate the estimate (in seconds).
+
+---
 
 ## Evaluation Framework
 
