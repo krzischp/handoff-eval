@@ -1,29 +1,20 @@
-import os
 import re
 
 import numpy as np
 import pandas as pd
 from fuzzywuzzy import fuzz
-from openai import AsyncOpenAI
 
-# Matches only very close words (e.g., "install" ≈ "instal")
-# only minor typos should be corrected
-fuzzy_match_threshold = 90
-
-client = AsyncOpenAI(
-    # This is the default and can be omitted
-    api_key=os.environ.get("OPENAI_API_KEY"),
-)
+from .constants import FUZZY_MATCH_THRESHOLD, STOPWORDS
+from .openai_client import DEFAULT_MODEL, call_openai_with_limit
 
 
 def preprocess_label(label):
     """Lowercase and remove common stopwords to extract meaningful keywords."""
-    stopwords = {"the", "a", "an", "in", "of", "on", "to", "and"}  # Extend if needed
     words = re.findall(r"\b\w+\b", label.lower())  # Extract words
-    return set(word for word in words if word not in stopwords)
+    return set(word for word in words if word not in STOPWORDS)
 
 
-def fuzzy_keyword_match(gt_keywords, pred_keywords, threshold=fuzzy_match_threshold):
+def fuzzy_keyword_match(gt_keywords, pred_keywords, threshold=FUZZY_MATCH_THRESHOLD):
     """
     Computes fuzzy matches between keyword sets.
     ✅ Matches similar words (e.g., "install" ~ "instal").
@@ -43,7 +34,7 @@ def fuzzy_keyword_match(gt_keywords, pred_keywords, threshold=fuzzy_match_thresh
 
 
 def compute_keyword_overlap_score(
-    gt_label, pred_label, fuzzy=True, threshold=fuzzy_match_threshold
+    gt_label, pred_label, fuzzy=True, threshold=FUZZY_MATCH_THRESHOLD
 ):
     """
     Computes a similarity score based on common keywords between GT and estimated labels.
@@ -81,7 +72,7 @@ def min_max_normalize(value, min_val, max_val):
     return (value - min_val) / (max_val - min_val)
 
 
-def compute_similarity(gt_row, pred_row, fuzzy_threshold=fuzzy_match_threshold):
+def compute_similarity(gt_row, pred_row, fuzzy_threshold=FUZZY_MATCH_THRESHOLD):
     """Compute total similarity score using keyword overlap & binary fuzzy match, handling NaN values."""
 
     # Handle NaN values by replacing with empty strings
@@ -156,7 +147,7 @@ def match_line_items(gt_rows, pred_rows):
     return matched_pairs
 
 
-async def llm_label_match_async(gt_label, pred_label, model="gpt-4-turbo"):
+async def llm_label_match_async(gt_label, pred_label, model=DEFAULT_MODEL):
     system_prompt = (
         "You are a highly experienced construction estimator specializing in residential projects. "
         "Your task is to determine whether two given labels describe a related construction task, "
@@ -172,7 +163,7 @@ async def llm_label_match_async(gt_label, pred_label, model="gpt-4-turbo"):
         f"Respond with 'Yes' or 'No' followed by a brief justification of one sentence max."
     )
 
-    response = await client.chat.completions.create(
+    response = await call_openai_with_limit(
         model=model,
         messages=[
             {"role": "system", "content": system_prompt},
@@ -181,6 +172,5 @@ async def llm_label_match_async(gt_label, pred_label, model="gpt-4-turbo"):
         temperature=0,
     )
 
-    # message = response["choices"][0]["message"]["content"].lower()
     message = response.choices[0].message.content.lower()
     return {"similar_task": 1 if "yes" in message else 0, "justification": message}

@@ -4,18 +4,9 @@ import os
 
 import pandas as pd
 
+from .constants import LINE_ITEM_INFO
 from .logger import logger
 from .similarity import llm_label_match_async, match_line_items
-
-line_item_info = [
-    "label",
-    "sectionName",
-    "uom",
-    "category",
-    "qty",
-    "rateUsd",
-    "rowTotalCostUsd",
-]
 
 
 # Function to load JSON files from a directory
@@ -35,8 +26,8 @@ def get_gt_vs_estimate_for_model(gt_rows, pred_rows, matched_pairs):
     for gt_idx, pred_idx in matched_pairs.items():
         gt_row = gt_rows[gt_idx]
         pred_row = pred_rows[pred_idx]
-        entry = {f"gt_{key}": gt_row[key] for key in line_item_info}
-        entry.update({f"pred_{key}": pred_row[key] for key in line_item_info})
+        entry = {f"gt_{key}": gt_row[key] for key in LINE_ITEM_INFO}
+        entry.update({f"pred_{key}": pred_row[key] for key in LINE_ITEM_INFO})
         data.append(entry)
     return pd.DataFrame(data)
 

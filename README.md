@@ -31,12 +31,12 @@ Now, install the library from GitHub:
 pip install git+https://github.com/krzischp/handoff-eval.git
 ```
 
+Your environment is now ready to use handoff-eval!
+
 Install jupyter (for running notebooks) and `python-dotenv` (for environment variables):
 ```bash
 pip install jupyter==1.1.1 python-dotenv==1.0.1
 ```
-
-Your environment is now ready to use handoff-eval!
 
 ### Developing & Testing handoff-eval
 If you want to modify and test the library, follow these steps:
@@ -108,7 +108,7 @@ Executing step 1 and step 2 of the methodology to generate our evaluation data.
 import handoff_eval
 
 async def run_async_processing():
-    return await handoff_eval.process_all_models_async(model_output_data, ground_truth_data)
+    return await handoff_eval.data_preparation.process_all_models_async(model_output_data, ground_truth_data)
 
 matched_pairs_dict = await run_async_processing()
 
@@ -126,8 +126,8 @@ with open(eval_file_path, "wb") as f:
 ```python
 x = "model"
 error_type = "recall"
-df_metrics = handoff_eval.compute_model_metrics_df(matched_pairs_dict, metric=None, error_type=error_type)
-handoff_eval.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
+df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=None, error_type=error_type)
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
 ```
 
 ![Recall by model](images/recall_by_model.png)
@@ -135,8 +135,8 @@ handoff_eval.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitali
 ```python
 metric = "rowTotalCostUsd"
 error_type = "mape"
-df_metrics = handoff_eval.compute_model_metrics_df(matched_pairs_dict, metric=metric, error_type=error_type)
-handoff_eval.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
+df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=metric, error_type=error_type)
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
 ```
 ![MAPE by model](images/mape_by_model.png)
 
@@ -144,8 +144,8 @@ handoff_eval.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitali
 
 ```python
 error_type = "precision"
-df_metrics = handoff_eval.compute_model_metrics_df(matched_pairs_dict, metric=None, error_type=error_type)
-handoff_eval.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
+df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=None, error_type=error_type)
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
 ```
 
 ![Precision by model](images/precision_by_model.png)
