@@ -194,6 +194,8 @@ The `model_outputs/` folder contains JSON files (`n.json`), each storing model-g
 
 ## Run the validation framework
 
+For a complete example of how to use `handoff-eval`, check out the [evaluation notebook](https://github.com/krzischp/handoff-eval/blob/main/notebooks/evaluation.ipynb).
+
 ### Generate the validation data
 
 Executing step 1 and step 2 of the methodology to generate our evaluation data.
@@ -249,4 +251,10 @@ handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_ty
 ### Investigate more deeply
 
 We can also try to spot the problematic examples for each of our model:
+```python
+x = "example"
+error_type = "recall"
+df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=None, error_type=error_type)
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
+```
 ![Recall by example](images/recall_by_example.png)

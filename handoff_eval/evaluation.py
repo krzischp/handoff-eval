@@ -93,6 +93,29 @@ def aggregate_by_model(df):
     return plot_data, model_order
 
 
+def filter_metrics(df_metrics, example_list=None, model_list=None):
+    """
+    Filters the df_metrics dataframe based on a list of examples and/or models.
+
+    Parameters:
+    - df_metrics (pd.DataFrame): The dataframe containing evaluation metrics.
+    - example_list (list, optional): List of examples to keep (e.g., ["example_01", "example_02"]).
+    - model_list (list, optional): List of models to keep (e.g., [2, 4, 5]).
+
+    Returns:
+    - pd.DataFrame: The filtered dataframe.
+    """
+    filtered_df = df_metrics.copy()
+
+    if example_list is not None:
+        filtered_df = filtered_df[filtered_df["example"].isin(example_list)]
+
+    if model_list is not None:
+        filtered_df = filtered_df[filtered_df["model"].isin(model_list)]
+
+    return filtered_df
+
+
 def plot_model_metrics(df, x="example", metric_name="Metric Value"):
     import matplotlib.pyplot as plt
 
@@ -109,7 +132,7 @@ def plot_model_metrics(df, x="example", metric_name="Metric Value"):
 
     # Sort x-axis and hue before plotting
     if x == "example":
-        x_label = "Example"
+        x_label = x.capitalize()
         example_order = sorted(df["example"].unique())  # Order examples alphabetically
         model_order = sorted(
             df["model"].unique(), key=lambda x: int(x)
