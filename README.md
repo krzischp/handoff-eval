@@ -242,10 +242,13 @@ handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_ty
 ![Recall by model](images/recall_by_model.png)
 
 ```python
+# Filter to keep only llm identified similar tasks before to calculate the residuals
+filtered_matched_pairs_dict = handoff_eval.data_preparation.filter_similar_task(matched_pairs_dict)
 metric = "rowTotalCostUsd"
 error_type = "mape"
-df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=metric, error_type=error_type)
-handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize(), confidence=confidence)
+metric_name = f"{error_type.capitalize()}(%) of {metric}"
+df_metrics = handoff_eval.evaluation.compute_model_metrics_df(filtered_matched_pairs_dict, metric=metric, error_type=error_type)
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=metric_name, confidence=confidence)
 ```
 ![MAPE by model](images/mape_by_model.png)
 

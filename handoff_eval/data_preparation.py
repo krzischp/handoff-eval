@@ -54,6 +54,30 @@ def match_line_item_pairs_for_model(model_data, ground_truth_data):
     return all_matched_pairs
 
 
+def filter_similar_task(matched_pairs_dict):
+    """
+    Filters matched_pairs_dict to retain only rows where 'similar_task' == 1.
+
+    Parameters:
+    - matched_pairs_dict (dict): Dictionary containing matched pairs data.
+
+    Returns:
+    - dict: A new dictionary with only the filtered data.
+    """
+    filtered_dict = {}
+
+    for model, examples in matched_pairs_dict.items():
+        filtered_dict[model] = {}
+        for example, data in examples.items():
+            df = data["matched_pairs_data"]
+            filtered_df = df[df["similar_task"] == 1].copy()  # Keep only similar tasks
+
+            if not filtered_df.empty:  # Ensure we don't store empty results
+                filtered_dict[model][example] = {"matched_pairs_data": filtered_df}
+
+    return filtered_dict
+
+
 # -------------- ASYNC ----------------
 async def process_row(row):
     return await llm_label_match_async(row["gt_label"], row["pred_label"])

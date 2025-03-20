@@ -5,6 +5,8 @@ import seaborn as sns
 from scipy import stats
 from sklearn.metrics import r2_score
 
+from handoff_eval.data_preparation import filter_similar_task
+
 # ----- Investigation plots -----
 
 
@@ -284,10 +286,11 @@ def find_best_tradeoff_models(matched_pairs_dict, top_n=2, confidence=None):
     top_recall_models = set(agg_recall.nlargest(top_n, "mean_value")["model"])
 
     # Compute MAPE metrics
+    filtered_matched_pairs_dict = filter_similar_task(matched_pairs_dict)
     metric_mape = "rowTotalCostUsd"
     error_type_mape = "mape"
     df_metrics_mape = compute_model_metrics_df(
-        matched_pairs_dict, metric=metric_mape, error_type=error_type_mape
+        filtered_matched_pairs_dict, metric=metric_mape, error_type=error_type_mape
     )
     agg_mape, _ = aggregate_by_model(df_metrics_mape, confidence=confidence)
     best_mape_models = set(agg_mape.nsmallest(top_n, "mean_value")["model"])
