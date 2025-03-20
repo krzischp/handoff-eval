@@ -296,3 +296,41 @@ def find_best_tradeoff_models(matched_pairs_dict, top_n=2, confidence=None):
     best_tradeoff_models = top_recall_models.intersection(best_mape_models)
 
     return best_tradeoff_models
+
+
+def plot_avg_estimation_time(model_output_data):
+    """
+    Computes and plots the average estimation time for each model.
+
+    Parameters:
+    - model_output_data (dict): Dictionary containing model outputs with `time_to_estimate_sec` values.
+    """
+    # Compute average estimation time for each model
+    avg_times = {
+        model_name: sum(
+            pred["time_to_estimate_sec"] for pred in model_data["estimate_preds"]
+        )
+        / len(model_data["estimate_preds"])
+        for model_name, model_data in model_output_data.items()
+        if len(model_data["estimate_preds"]) > 0
+    }
+
+    # Convert to DataFrame and sort by time
+    df_avg_time = pd.DataFrame(avg_times.items(), columns=["model", "avg_time"])
+    df_avg_time = df_avg_time.sort_values(by="avg_time", ascending=True)
+
+    # Plot
+    plt.figure(figsize=(10, 5))
+    sns.barplot(
+        data=df_avg_time,
+        x="model",
+        y="avg_time",
+        order=df_avg_time["model"].astype(str),
+    )
+    plt.xlabel("Model")
+    plt.ylabel("Average Estimation Time (sec)")
+    plt.title("Average Time to Estimate per Model")
+    plt.xticks(rotation=45)
+    plt.show()
+
+    return df_avg_time

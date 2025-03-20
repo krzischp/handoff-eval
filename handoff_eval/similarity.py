@@ -17,8 +17,8 @@ def preprocess_label(label):
 def fuzzy_keyword_match(gt_keywords, pred_keywords, threshold=FUZZY_MATCH_THRESHOLD):
     """
     Computes fuzzy matches between keyword sets.
-    ✅ Matches similar words (e.g., "install" ~ "instal").
-    ✅ Uses a threshold to consider words as similar.
+    - Matches similar words (e.g., "install" ~ "instal").
+    - Uses a threshold to consider words as similar.
     """
     matched = 0
     for gt_word in gt_keywords:
@@ -38,8 +38,8 @@ def compute_keyword_overlap_score(
 ):
     """
     Computes a similarity score based on common keywords between GT and estimated labels.
-    ✅ Uses Jaccard-like similarity with fuzzy matching for typos.
-    ✅ Adjusts overlap based on a similarity threshold.
+    - Uses Jaccard-like similarity with fuzzy matching for typos.
+    - Adjusts overlap based on a similarity threshold.
     """
 
     gt_keywords = preprocess_label(gt_label)

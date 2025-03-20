@@ -63,8 +63,8 @@ async def add_llm_label_match_to_df_async(df):
     """
     Enhances a single DataFrame with LLM-based similarity evaluation asynchronously.
 
-    ✅ Adds 'similar_task' (1 if similar, 0 otherwise)
-    ✅ Adds 'justification' (LLM reasoning for the decision)
+    - Adds 'similar_task' (1 if similar, 0 otherwise)
+    - Adds 'justification' (LLM reasoning for the decision)
     """
     tasks = [process_row(row) for _, row in df.iterrows()]
     results = await asyncio.gather(*tasks)
@@ -94,9 +94,9 @@ async def process_matched_pairs_async(matched_pairs):
     """
     Enhances matched_pairs with LLM-based similarity evaluation and computes recall asynchronously.
 
-    ✅ Applies LLM-based label matching to add 'similar_task' and 'justification' columns.
-    ✅ Computes recall, precision, f1
-    ✅ Updates each example's 'matched_pairs_data' and stores recall.
+    - Applies LLM-based label matching to add 'similar_task' and 'justification' columns.
+    - Computes recall, precision, f1
+    - Updates each example's 'matched_pairs_data' and stores recall.
     """
     matched_pairs = await add_llm_label_match_async(matched_pairs)
 
