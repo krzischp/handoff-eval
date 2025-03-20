@@ -15,6 +15,13 @@
 ---
 
 ## Installation Guide
+### Ensure the correct Python version is installed
+```bash
+brew install pyenv  # macOS
+
+pyenv install $(cat .python-version)
+pyenv local $(cat .python-version)
+```
 
 ### Using `handoff-eval` as a Library
 
@@ -193,6 +200,11 @@ The `model_outputs/` folder contains JSON files (`n.json`), each storing model-g
 
 
 ## Run the validation framework
+
+Before to run it, create the folder to save the evaluation runs files
+```bash
+mkdir ./data/evaluations
+```
 
 For a complete example of how to use `handoff-eval`, check out the [evaluation notebook](https://github.com/krzischp/handoff-eval/blob/main/notebooks/evaluation.ipynb).
 
