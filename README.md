@@ -220,10 +220,11 @@ with open(eval_file_path, "wb") as f:
 **Recall** and **MAPE of `rowTotalCostUsd`** are the main KPIs. Here we can identify the model "4" as the best performer.
 
 ```python
+confidence=0.95
 x = "model"
 error_type = "recall"
 df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=None, error_type=error_type)
-handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize(), confidence=confidence)
 ```
 
 ![Recall by model](images/recall_by_model.png)
@@ -232,7 +233,7 @@ handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_ty
 metric = "rowTotalCostUsd"
 error_type = "mape"
 df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=metric, error_type=error_type)
-handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize(), confidence=confidence)
 ```
 ![MAPE by model](images/mape_by_model.png)
 
@@ -241,7 +242,7 @@ handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_ty
 ```python
 error_type = "precision"
 df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=None, error_type=error_type)
-handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize(), confidence=confidence)
 ```
 
 ![Precision by model](images/precision_by_model.png)
@@ -250,9 +251,29 @@ handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_ty
 
 ### Investigate more deeply
 
-We can also try to spot the problematic examples for each of our model:
+
+#### Performances for specific components of the total cost
+
+We can investigate the MAPE of the components of the total cost: `qty` and `rateUsd`:
+```python
+metric = "qty"
+error_type = "mape"
+df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=metric, error_type=error_type)
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize(), confidence=confidence)
+```
+
+```python
+metric = "rateUsd"
+error_type = "mape"
+df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict, metric=metric, error_type=error_type)
+handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize(), confidence=confidence)
+```
+
 
 #### Performance by example
+
+We can also try to spot the problematic examples for each of our model:
+
 ```python
 x = "example"
 error_type = "recall"

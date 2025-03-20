@@ -1,8 +1,9 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import r2_score
-import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy import stats
+from sklearn.metrics import r2_score
 
 # ----- Investigation plots -----
 
@@ -73,25 +74,106 @@ def compute_model_metrics_df(matched_pairs_dict, metric=None, error_type="mae"):
     return pd.DataFrame(data)
 
 
-def aggregate_by_model(df):
+def aggregate_by_model(df, confidence=None):
     """
-    Aggregates metric values by model, computing the mean across all examples.
+    Aggregates metric values by model, computing the mean and confidence interval across all examples.
 
     Parameters:
     - df: DataFrame containing ["example", "model", "value"].
+    - confidence: Confidence level for the interval. If None, no confidence interval is computed.
 
     Returns:
-    - plot_data: Aggregated DataFrame with mean values per model.
+    - plot_data: Aggregated DataFrame with mean values and confidence intervals per model (if applicable).
     - model_order: Sorted list of model names.
     """
-    plot_data = df.groupby("model", as_index=False)[
-        "value"
-    ].mean()  # Aggregate over examples
+    grouped = df.groupby("model")["value"]
+    means = grouped.mean()
+
+    plot_data = pd.DataFrame({"model": means.index, "mean_value": means.values})
+
+    if confidence is not None:
+        stds = grouped.std()
+        counts = grouped.count()
+        # - stats.t.ppf Student's t-distribution percent point function (inverse of CDF)
+        # - (1 + confidence) / 2.0 Example: If confidence=0.95, then (1 + 0.95) / 2 = 0.975, \
+        # which corresponds to the 97.5th percentile of the t-distribution
+        # - counts - 1 is the degrees of freedom (n-1), where counts represents \
+        # the number of data points for each model
+        ci_half_width = stats.t.ppf((1 + confidence) / 2.0, counts - 1) * (
+            stds / np.sqrt(counts)
+        )
+
+        plot_data["ci_lower"] = (means - ci_half_width).values
+        plot_data["ci_upper"] = (means + ci_half_width).values
+
     model_order = sorted(
         plot_data["model"].unique(), key=lambda x: int(x)
     )  # Order models numerically
 
     return plot_data, model_order
+
+
+def plot_model_metrics(df, x="example", metric_name="Metric Value", confidence=None):
+    """
+    Plots a DataFrame containing model evaluation metrics with optional confidence intervals.
+
+    Parameters:
+    - df: DataFrame containing ["example", "model", "value"].
+    - x: "example" to plot per example, or "model" to aggregate over all examples.
+    - confidence: Confidence level for the interval. If None, confidence intervals are not plotted.
+    """
+    valid_x_types = ["example", "model"]
+    if x not in valid_x_types:
+        x = "example"  # Default to example-based plotting
+
+    # Sort x-axis and hue before plotting
+    if x == "example":
+        x_label = x.capitalize()
+        example_order = sorted(df["example"].unique())  # Order examples alphabetically
+        model_order = sorted(
+            df["model"].unique(), key=lambda x: int(x)
+        )  # Order models numerically
+        plot_data = df
+    else:  # Aggregate by model
+        x_label = "Model"
+        plot_data, model_order = aggregate_by_model(df, confidence=confidence)
+
+    # Create bar plot
+    plt.figure(figsize=(12, 6))
+    ax = sns.barplot(
+        data=plot_data,
+        x=x if x == "example" else "model",
+        y="value" if x == "example" else "mean_value",
+        hue="model" if x == "example" else None,
+        order=example_order if x == "example" else model_order,
+    )
+
+    # Add error bars manually if confidence intervals are calculated
+    if x == "model" and confidence is not None:
+        for i, row in plot_data.iterrows():
+            ax.errorbar(
+                x=i,
+                y=row["mean_value"],
+                yerr=[
+                    [row["mean_value"] - row.get("ci_lower", row["mean_value"])],
+                    [row.get("ci_upper", row["mean_value"]) - row["mean_value"]],
+                ],
+                fmt="none",
+                ecolor="black",
+                capsize=5,
+            )
+
+    # Formatting
+    plt.xlabel(x_label)
+    plt.ylabel(metric_name)
+    plt.title(f"{metric_name} by {x_label}")
+    plt.xticks(rotation=45)
+
+    if x == "example":
+        plt.legend(title="Model")
+
+    # Show plot
+    plt.show()
 
 
 def filter_metrics(df_metrics, example_list=None, model_list=None):
@@ -115,11 +197,6 @@ def filter_metrics(df_metrics, example_list=None, model_list=None):
         filtered_df = filtered_df[filtered_df["model"].isin(model_list)]
 
     return filtered_df
-
-
-# Example usage:
-# df_metrics = add_metadata_to_metrics(df_metrics, ground_truth_data, lambda x: bucketize_word_count(x, 3), "word_count_bucket")
-# display(df_metrics) to visualize the updated dataframe
 
 
 def add_metadata_to_metrics(df_metrics, ground_truth_data, metadata_func, column_name):
@@ -147,55 +224,6 @@ def add_metadata_to_metrics(df_metrics, ground_truth_data, metadata_func, column
     df_metrics_copy[column_name] = df_metrics_copy["example"].map(metadata_dict)
 
     return df_metrics_copy
-
-
-def plot_model_metrics(df, x="example", metric_name="Metric Value"):
-    """
-    Plots a DataFrame containing model evaluation metrics.
-
-    Parameters:
-    - df: DataFrame containing ["example", "model", "value"].
-    - x: "example" to plot per example, or "model" to aggregate over all examples.
-    """
-    valid_x_types = ["example", "model"]
-    if x not in valid_x_types:
-        x = "example"  # Default to example-based plotting
-
-    # Sort x-axis and hue before plotting
-    if x == "example":
-        x_label = x.capitalize()
-        example_order = sorted(df["example"].unique())  # Order examples alphabetically
-        model_order = sorted(
-            df["model"].unique(), key=lambda x: int(x)
-        )  # Order models numerically
-        plot_data = df
-    else:  # Aggregate by model
-        x_label = "Model"
-        plot_data, model_order = aggregate_by_model(df)
-
-    # Create bar plot
-    plt.figure(figsize=(12, 6))
-    sns.barplot(
-        data=plot_data,
-        x=x,
-        y="value",
-        hue=(
-            "model" if x == "example" else None
-        ),  # Use hue for models only if plotting by example
-        order=example_order if x == "example" else model_order,
-    )
-
-    # Formatting
-    plt.xlabel(x_label)
-    plt.ylabel(metric_name)
-    plt.title(f"{metric_name} by {x_label}")
-    plt.xticks(rotation=45)
-
-    if x == "example":
-        plt.legend(title="Model")
-
-    # Show plot
-    plt.show()
 
 
 def plot_metric_by_metadata(df_metrics, error_type, x_column, hue_column=None):
@@ -234,13 +262,14 @@ def plot_metric_by_metadata(df_metrics, error_type, x_column, hue_column=None):
 
 
 # ---- Find best tradeoff ----
-def find_best_tradeoff_models(matched_pairs_dict, top_n=2):
+def find_best_tradeoff_models(matched_pairs_dict, top_n=2, confidence=None):
     """
     Finds the best tradeoff models based on highest recall and lowest MAPE.
 
     Parameters:
     - matched_pairs_dict (dict): Dictionary containing model evaluation data.
     - top_n (int): Number of top models to select.
+    - confidence (float or None): Confidence level for computing confidence intervals.
 
     Returns:
     - list: Intersection of top models based on highest recall and lowest MAPE.
@@ -251,8 +280,8 @@ def find_best_tradeoff_models(matched_pairs_dict, top_n=2):
     df_metrics_recall = compute_model_metrics_df(
         matched_pairs_dict, metric=None, error_type=error_type_recall
     )
-    agg_recall, _ = aggregate_by_model(df_metrics_recall)
-    top_recall_models = set(agg_recall.nlargest(top_n, "value")["model"])
+    agg_recall, _ = aggregate_by_model(df_metrics_recall, confidence=confidence)
+    top_recall_models = set(agg_recall.nlargest(top_n, "mean_value")["model"])
 
     # Compute MAPE metrics
     metric_mape = "rowTotalCostUsd"
@@ -260,8 +289,8 @@ def find_best_tradeoff_models(matched_pairs_dict, top_n=2):
     df_metrics_mape = compute_model_metrics_df(
         matched_pairs_dict, metric=metric_mape, error_type=error_type_mape
     )
-    agg_mape, _ = aggregate_by_model(df_metrics_mape)
-    best_mape_models = set(agg_mape.nsmallest(top_n, "value")["model"])
+    agg_mape, _ = aggregate_by_model(df_metrics_mape, confidence=confidence)
+    best_mape_models = set(agg_mape.nsmallest(top_n, "mean_value")["model"])
 
     # Find intersection of best models
     best_tradeoff_models = top_recall_models.intersection(best_mape_models)
