@@ -1,14 +1,10 @@
 import os
-from unittest.mock import patch
-
 import pytest
 
 # Ensure OpenAI API Key is set in test environment to avoid import errors
 os.environ["OPENAI_API_KEY"] = "test_key"
 
-# Mock OpenAI client to prevent actual API calls
-with patch("handoff_eval.similarity.AsyncOpenAI"):
-    from handoff_eval.similarity import min_max_normalize
+from handoff_eval.similarity import min_max_normalize  # noqa: E402
 
 
 def test_min_max_normalize():

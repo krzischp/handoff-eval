@@ -73,9 +73,8 @@ cd handoff-eval
 
 Set up a virtual environment and use `make init` to install all required dependencies, including `handoff-eval` in editable mode:
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate  # On macOS/Linux
 make init
+source .venv/bin/activate  # On macOS/Linux
 ```
 
 Run the test suite to ensure everything works:

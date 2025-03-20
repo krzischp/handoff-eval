@@ -10,7 +10,7 @@ init: $(VENV)/bin/activate ## Create virtual environment and install dependencie
 
 $(VENV)/bin/activate: requirements.txt requirements-dev.txt setup.py
 	@echo "Creating virtual environment..."
-	python -m venv $(VENV)
+	python3 -m venv $(VENV)
 	@echo "Installing dependencies..."
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
