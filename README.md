@@ -251,6 +251,8 @@ handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_ty
 ### Investigate more deeply
 
 We can also try to spot the problematic examples for each of our model:
+
+#### Performance by example
 ```python
 x = "example"
 error_type = "recall"
@@ -258,3 +260,41 @@ df_metrics = handoff_eval.evaluation.compute_model_metrics_df(matched_pairs_dict
 handoff_eval.evaluation.plot_model_metrics(df_metrics, x=x, metric_name=error_type.capitalize())
 ```
 ![Recall by example](images/recall_by_example.png)
+
+
+We can also filter models and examples in the plot. For e.g., we might want to compare the best and worst models on specific examples:
+```python
+x = "example"
+error_type = "recall"
+filtered_df = handoff_eval.evaluation.filter_metrics(df_metrics, example_list=["example_02", "example_10"], model_list=["4", "7"])
+handoff_eval.evaluation.plot_model_metrics(filtered_df, x=x, metric_name=error_type.capitalize())
+```
+![Recall by filtered example](images/recall_by_filtered_example.png)
+
+You can then investigate the input of the specific example `example_02` where both models are performing well
+```python
+data_path = "../data/ai_ml_take_home"
+ground_truth_path = os.path.join(data_path, "ground_truth")
+ground_truth_data = handoff_eval.data_preparation.load_json_files(ground_truth_path)
+
+print(ground_truth_data["example_02"]["input"])
+> "I have a utility room which needs sound insulation and drywall on one wall. I would like this wall painted also. Wall is 20'x10'."
+```
+Here the input is very simple with very few needs.
+
+#### Performance by input metadata
+
+We can implement functions to extract metadata from the input, and plot the performances using `plot_metric_by_metadata`
+
+```python
+bucket_edges = handoff_eval.utils.compute_word_count_buckets(ground_truth_data, n_buckets=3)
+
+df_metrics_with_metadata = handoff_eval.evaluation.add_metadata_to_metrics(
+    df_metrics, ground_truth_data, lambda x: handoff_eval.utils.bucketize_word_count(x, bucket_edges), "word_count_bucket"
+)
+df_metrics_with_metadata = handoff_eval.utils.sort_buckets(df_metrics_with_metadata, "word_count_bucket", bucket_edges)
+handoff_eval.evaluation.plot_metric_by_metadata(df_metrics_with_metadata, error_type="recall", x_column="word_count_bucket", hue_column="model")
+```
+![Recall by words count](images/recall_by_wordcount.png)
+
+For e.g., here can observe that inputs with more tokens have a higher recall in average. This can be due to more context provided to the llm to better identify the items.
