@@ -7,8 +7,8 @@
   - [Developing & Testing `handoff-eval`](#developing--testing-handoff-eval)
 - [Setting Up Data Folder](#setting-up-data-folder)
 - [Evaluation Framework](#evaluation-framework)
-- [Run the Validation Framework](#run-the-validation-framework)
-  - [Generate the Validation Data](#generate-the-validation-data)
+- [Run the Evaluation Framework](#run-the-evaluation-framework)
+  - [Generate the Evaluation Data](#generate-the-evaluation-data)
   - [Identify the Best Models](#identify-the-best-models)
   - [Investigate More Deeply](#investigate-more-deeply)
 
@@ -198,7 +198,7 @@ The `model_outputs/` folder contains JSON files (`n.json`), each storing model-g
 
 
 
-## Run the validation framework
+## Run the evaluation framework
 
 Before to run it, create the folder to save the evaluation runs files
 ```bash
@@ -207,7 +207,7 @@ mkdir ./data/evaluations
 
 For a complete example of how to use `handoff-eval`, check out the [evaluation notebook](https://github.com/krzischp/handoff-eval/blob/main/notebooks/evaluation.ipynb).
 
-### Generate the validation data
+### Generate the evaluation data
 
 Executing step 1 and step 2 of the methodology to generate our evaluation data.
 
