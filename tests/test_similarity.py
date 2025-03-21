@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 # Ensure OpenAI API Key is set in test environment to avoid import errors

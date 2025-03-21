@@ -50,6 +50,7 @@ def match_line_item_pairs_for_model(model_data, ground_truth_data):
         )
         all_matched_pairs[file_name]["matched_pairs_data"] = matched_pairs_data
         all_matched_pairs[file_name]["n_estimations"] = len(pred_rows)
+        all_matched_pairs[file_name]["n_ground_truths"] = len(gt_rows)
 
     return all_matched_pairs
 
@@ -129,8 +130,8 @@ async def process_matched_pairs_async(matched_pairs):
         df = matched_pairs[file_name]["matched_pairs_data"]
         n_similar = sum(df["similar_task"] == 1)
         n_estimations = matched_pairs[file_name]["n_estimations"]
-        n_gt = df.shape[0]
-        recall = n_similar / n_gt if n_gt > 0 else 0
+        n_ground_truths = matched_pairs[file_name]["n_ground_truths"]
+        recall = n_similar / n_ground_truths if n_ground_truths > 0 else 0
         precision = n_similar / n_estimations if n_estimations > 0 else 0
         matched_pairs[file_name]["recall"] = recall
         matched_pairs[file_name]["precision"] = precision
